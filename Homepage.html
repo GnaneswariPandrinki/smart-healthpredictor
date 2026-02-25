@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Health Predictor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+        body{height:100vh;background:url('https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1600&q=80') no-repeat center center;background-size:cover;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+        body::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,128,128,0.5);z-index:0;}
+        .container{position:relative;z-index:1;width:90%;max-width:950px;padding:25px;backdrop-filter:blur(15px);background:rgba(255,255,255,0.15);border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.3);}
+        .hidden{display:none;}
+        h1{text-align:center;color:white;font-size:40px;margin-bottom:20px;}
+        p{text-align:center;color:white;margin-bottom:20px;font-size:18px;}
+        input,select{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:none;font-size:15px;}
+        button{width:100%;padding:12px;margin:15px 0;border:none;border-radius:25px;background:#0072ff;color:white;font-size:16px;cursor:pointer;transition:0.3s;}
+        button:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,0.3);}
+        .card{background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);border-radius:15px;padding:18px;margin:12px;color:white;text-align:left;}
+        ul{list-style-type:none;padding:0;color:white;}
+        li{margin:8px 0;font-weight:600;}
+        a{color:#ffd700;text-decoration:none;}
+        a:hover{text-decoration:underline;}
+    </style>
+</head>
+<body>
+
+<!-- HOMEPAGE -->
+<div class="container" id="homepage">
+    <h1>Smart Health Predictor</h1>
+    <p>Predict health risk early & protect your wellbeing.</p>
+    <input type="text" id="username" placeholder="Enter Your Name">
+    <input type="password" id="password" placeholder="Enter Phone Number (10 digits)">
+    <button onclick="login()">Login</button>
+    <div id="loginMsg" style="text-align:center;color:red;"></div>
+</div>
+
+<!-- CHECK-IN -->
+<div class="container hidden" id="checkinPage">
+    <h1>Weekly Health Check-in</h1>
+    <input type="number" id="energy" placeholder="Energy Level (1-5)" min="1" max="5">
+    <input type="number" id="sleep" placeholder="Sleep Hours (1-8)" min="1" max="8">
+    <input type="number" id="stress" placeholder="Stress Level (1-5)" min="1" max="5">
+    <select id="appetite">
+        <option value="">Appetite?</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+    </select>
+    <select id="periodic">
+        <option value="">Periodic Cycle</option>
+        <option value="Normal">Normal</option>
+        <option value="Irregular">Irregular</option>
+        <option value="Not Applicable">Not Applicable</option>
+    </select>
+    <button onclick="submitCheckin()">Submit</button>
+</div>
+
+<!-- DASHBOARD: REPORT & RISK -->
+<div class="container hidden" id="dashboard1">
+    <h1>Instant Report & Risk Analysis</h1>
+    <div class="card"><b>Welcome:</b> <span id="userDisplay"></span></div>
+    <div class="card"><b>Health Score:</b> <span id="healthScore"></span></div>
+    <div class="card"><b>Risk Category:</b> <span id="riskCategory"></span></div>
+    <div class="card">
+        <b>Instant Report:</b>
+        <p id="report"></p>
+    </div>
+    <button onclick="showDietPage()">Next: Diet & Exercises</button>
+</div>
+
+<!-- DASHBOARD: DIET & EXERCISES -->
+<div class="container hidden" id="dietPage">
+    <h1>Suggested Diet & Exercises</h1>
+    <div class="card">
+        <b>Diet Suggestions:</b>
+        <ul id="dietList"></ul>
+    </div>
+    <div class="card">
+        <b>Exercise Suggestions:</b>
+        <ul id="exerciseList"></ul>
+    </div>
+    <button onclick="showHospitalList()">Next: Nearby Hospitals</button>
+</div>
+
+<!-- HOSPITAL SUGGESTIONS WITH GOOGLE MAPS LINKS -->
+<div class="container hidden" id="hospitalPage">
+    <h1>Nearby Hospitals</h1>
+    <div class="card">
+        <ul id="hospitalList"></ul>
+    </div>
+</div>
+
+<script>
+function login(){
+    let name=document.getElementById("username").value.trim();
+    let phone=document.getElementById("password").value.trim();
+    let msg=document.getElementById("loginMsg");
+    if(name===""){msg.innerText="Please enter your name.";return;}
+    if(!/^[0-9]{10}$/.test(phone)){msg.innerText="Enter 10-digit phone number.";return;}
+    localStorage.setItem("username",name);
+    document.getElementById("homepage").classList.add("hidden");
+    document.getElementById("checkinPage").classList.remove("hidden");
+}
+
+function submitCheckin(){
+    const energy=parseInt(document.getElementById("energy").value);
+    const sleep=parseInt(document.getElementById("sleep").value);
+    const stress=parseInt(document.getElementById("stress").value);
+    const appetite=document.getElementById("appetite").value;
+    const periodic=document.getElementById("periodic").value;
+    if(isNaN(energy)||isNaN(sleep)||isNaN(stress)||!appetite||!periodic){alert("Fill all fields.");return;}
+
+    // calculate score
+    let score=0;
+    if(energy<=2) score+=2;
+    if(sleep<5) score+=2;
+    if(stress>=4) score+=3;
+    if(appetite==="No") score+=1;
+    if(periodic==="Irregular") score+=2;
+    let risk=(score<=3?"Safe":(score<=6?"Mild Risk":"High Risk"));
+
+    // build instant report
+    let report=`Energy: ${energy}/5\nSleep: ${sleep}/8\nStress: ${stress}/5\nAppetite: ${appetite}\nPeriodic Cycle: ${periodic}`;
+
+    // display on dashboard1
+    document.getElementById("userDisplay").innerText = localStorage.getItem("username");
+    document.getElementById("healthScore").innerText = score;
+    document.getElementById("riskCategory").innerText = risk;
+    document.getElementById("report").innerText = report;
+
+    document.getElementById("checkinPage").classList.add("hidden");
+    document.getElementById("dashboard1").classList.remove("hidden");
+
+    localStorage.setItem("score",score);
+}
+
+function showDietPage(){
+    document.getElementById("dashboard1").classList.add("hidden");
+    document.getElementById("dietPage").classList.remove("hidden");
+
+    const score=parseInt(localStorage.getItem("score"));
+    const dietList=document.getElementById("dietList");
+    const exerciseList=document.getElementById("exerciseList");
+    dietList.innerHTML=""; exerciseList.innerHTML="";
+
+    if(score<=3){
+        dietList.innerHTML+="<li>Eat balanced meals with fruits & vegetables</li>";
+        dietList.innerHTML+="<li>Drink plenty of water</li>";
+        exerciseList.innerHTML+="<li>Walk 20-30 mins daily</li>";
+    } else if(score<=6){
+        dietList.innerHTML+="<li>Include protein & fibre rich foods</li>";
+        dietList.innerHTML+="<li>Hydrate well</li>";
+        exerciseList.innerHTML+="<li>Moderate cardio 25-35 mins</li>";
+    } else {
+        dietList.innerHTML+="<li>Consult nutritionist for custom diet plan</li>";
+        exerciseList.innerHTML+="<li>Light stretching, avoid heavy workouts</li>";
+    }
+}
+
+function showHospitalList(){
+    document.getElementById("dietPage").classList.add("hidden");
+    document.getElementById("hospitalPage").classList.remove("hidden");
+
+    const list = document.getElementById("hospitalList");
+    list.innerHTML = "";
+
+    const city = "Vijayawada"; // can replace dynamically
+    const hospitals = [
+        "City Care Hospital",
+        "Sunrise Medical Center",
+        "Hope Wellness Hospital",
+        "Green Valley Clinic",
+        "LifeCare Health Center"
+    ];
+
+    hospitals.forEach(h => {
+        const mapLink = `https://www.google.com/maps/search/${encodeURIComponent(h + ", " + city)}`;
+        list.innerHTML += `<li><a href="${mapLink}" target="_blank">${h}</a></li>`;
+    });
+}
+</script>
+
+</body>
+</html>s
